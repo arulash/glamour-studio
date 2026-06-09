@@ -66,3 +66,27 @@ export async function fetchBookedTimesForDate(dateStr) {
   }
   return (data || []).map(r => r.booking_time);
 }
+
+/** Fetch all bookings, sorted by date asc, time asc. */
+export async function fetchAllBookings() {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("*")
+    .order("booking_date", { ascending: true })
+    .order("booking_time", { ascending: true });
+  if (error) {
+    console.error("fetchAllBookings error", error);
+    return [];
+  }
+  return data || [];
+}
+
+/** Update a single booking's status. */
+export async function updateBookingStatus(id, status) {
+  const { error } = await supabase
+    .from("bookings")
+    .update({ status })
+    .eq("id", id);
+  if (error) throw error;
+  return true;
+}

@@ -11,6 +11,7 @@ import ServicesPage from "@/pages/ServicesPage";
 import AboutPage from "@/pages/AboutPage";
 import ContactPage from "@/pages/ContactPage";
 import BookingPage from "@/pages/BookingPage";
+import AdminPage from "@/pages/AdminPage";
 
 const ScrollTop = () => {
   const { pathname } = useLocation();
@@ -23,24 +24,37 @@ const PageWrap = ({ children }) => {
   return <div key={pathname} className="page-enter">{children}</div>;
 };
 
+const SiteChrome = ({ children }) => {
+  const { pathname } = useLocation();
+  const isAdmin = pathname.startsWith("/admin");
+  return (
+    <>
+      {!isAdmin && <Navbar />}
+      {children}
+      {!isAdmin && <Footer />}
+    </>
+  );
+};
+
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
         <LoadingScreen />
         <ScrollTop />
-        <Navbar />
-        <PageWrap>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/services" element={<ServicesPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/booking" element={<BookingPage />} />
-            <Route path="*" element={<HomePage />} />
-          </Routes>
-        </PageWrap>
-        <Footer />
+        <SiteChrome>
+          <PageWrap>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/services" element={<ServicesPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/booking" element={<BookingPage />} />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="*" element={<HomePage />} />
+            </Routes>
+          </PageWrap>
+        </SiteChrome>
         <Toaster theme="dark" position="bottom-right" />
       </BrowserRouter>
     </div>
