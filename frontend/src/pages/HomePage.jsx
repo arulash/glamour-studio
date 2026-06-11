@@ -26,13 +26,13 @@ export default function HomePage() {
         <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.62)" }} />
         <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 50%, rgba(10,10,10,0.95) 100%)" }} />
 
-        <div className="relative z-10 h-full max-w-[1400px] mx-auto px-6 lg:px-12 flex items-center">
+        <div className="relative z-10 h-full max-w-[1400px] mx-auto px-6 lg:px-12 flex items-end pb-20 lg:pb-28">
           <div className="max-w-3xl">
             <Reveal>
               <div className="eyebrow">ESTABLISHED IN KAMMANAHALLI</div>
             </Reveal>
             <Reveal delay={150}>
-              <h1 className="serif mt-8 text-5xl sm:text-6xl lg:text-7xl xl:text-8xl leading-[1.02] tracking-tight">
+              <h1 className="serif mt-5 text-5xl sm:text-6xl lg:text-7xl xl:text-8xl leading-[1.02] tracking-tight">
                 <span className="text-white">Bangalore&apos;s </span>
                 <span className="font-italic-serif" style={{ color: "var(--gold)" }}>Premium</span>
                 <br />
