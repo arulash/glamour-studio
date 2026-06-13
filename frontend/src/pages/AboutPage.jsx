@@ -35,18 +35,24 @@ export default function AboutPage() {
 
           <Reveal delay={200}>
             <div
-              data-testid="story-image-placeholder"
-              className="relative w-full"
+              data-testid="story-image"
+              className="relative w-full overflow-hidden"
               style={{
                 aspectRatio: "3 / 4",
-                background: "linear-gradient(180deg, #1a1a1a 0%, #0e0e0e 100%)",
                 border: "1px solid var(--gold)"
               }}
             >
-              <div className="absolute inset-6 flex items-center justify-center text-white/30 text-xs tracking-[0.3em]">
-                STORY IMAGE
-              </div>
-              <span className="absolute top-4 left-4 text-[0.62rem] tracking-[0.3em]" style={{ color: "var(--gold)" }}>
+              <img
+                src="https://images.unsplash.com/photo-1536520002442-39764a41e987?fm=jpg&q=80&w=1600&auto=format&fit=crop"
+                alt="Glamour Studio salon interior"
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ filter: "contrast(1.02) saturate(0.95) brightness(0.92)" }}
+              />
+              <div
+                className="absolute inset-0"
+                style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(10,10,10,0.55) 100%)" }}
+              />
+              <span className="absolute top-4 left-4 text-[0.62rem] tracking-[0.3em] z-10" style={{ color: "var(--gold)" }}>
                 · ESTD KOramaNGALA
               </span>
             </div>
