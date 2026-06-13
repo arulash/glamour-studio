@@ -28,7 +28,7 @@ export const TEAM = [
     name: "Kiran",
     title: "COLOR EXPERT",
     exp: "6 years experience",
-    photo: "https://images.unsplash.com/photo-1639747280929-e84e673b1cd6?w=800&q=80&auto=format&fit=crop"
+    photo: "https://images.unsplash.com/photo-1635273051937-a0ddef9573b6?fm=jpg&q=80&w=1200&auto=format&fit=crop"
   }
 ];
 
