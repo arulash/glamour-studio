@@ -90,3 +90,45 @@ export async function updateBookingStatus(id, status) {
   if (error) throw error;
   return true;
 }
+
+/** Insert a walk-in booking. status=completed, source=walkin, today's date+time. */
+export async function createWalkIn({ customer_name, customer_phone, services, total_price, total_duration }) {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const booking_date = `${yyyy}-${mm}-${dd}`;
+  const hh = now.getHours();
+  const min = now.getMinutes();
+  const ampm = hh >= 12 ? "PM" : "AM";
+  const hour12 = ((hh + 11) % 12) + 1;
+  const booking_time = `${hour12}:${String(min).padStart(2, "0")} ${ampm}`;
+
+  const insertPayload = {
+    customer_name: (customer_name || "").trim() || "Anonymous",
+    customer_phone: (customer_phone || "").trim() || "",
+    customer_email: null,
+    services,
+    total_price,
+    total_duration,
+    booking_date,
+    booking_time,
+    status: "completed",
+    source: "walkin"
+  };
+
+  const { data: inserted, error: insertErr } = await supabase
+    .from("bookings")
+    .insert(insertPayload)
+    .select()
+    .single();
+  if (insertErr) throw insertErr;
+
+  const reference = `GS-${1000 + inserted.id}`;
+  const { error: updateErr } = await supabase
+    .from("bookings")
+    .update({ booking_reference: reference })
+    .eq("id", inserted.id);
+  if (updateErr) throw updateErr;
+  return { reference, id: inserted.id };
+}

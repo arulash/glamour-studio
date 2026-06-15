@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Search } from "lucide-react";
 import { fetchAllBookings, updateBookingStatus } from "@/lib/supabase";
+import WalkInsView from "@/components/admin/WalkInsView";
+import ClientsView from "@/components/admin/ClientsView";
+import ReportsView from "@/components/admin/ReportsView";
 
 const STAFF_USER = "staff_glamour";
 const STAFF_PASS = "glamour@123";
@@ -255,6 +258,7 @@ function Dashboard({ onLogout, exiting }) {
   const [search, setSearch] = useState("");
   const [tableKey, setTableKey] = useState(0); // bumps to re-trigger fade
   const [pageShown, setPageShown] = useState(false);
+  const [view, setView] = useState("BOOKINGS");
   const initialMount = useRef(true);
 
   useEffect(() => {
@@ -263,6 +267,9 @@ function Dashboard({ onLogout, exiting }) {
   }, []);
 
   // Data loading: deferred via setTimeout to keep effect side-effect free
+  const reload = () => {
+    fetchAllBookings().then(data => setBookings(data));
+  };
   useEffect(() => {
     let active = true;
     const load = async () => {
@@ -290,7 +297,10 @@ function Dashboard({ onLogout, exiting }) {
     today: bookings.filter(b => b.booking_date === todayKey).length,
     pending: bookings.filter(b => b.status === "pending").length,
     completed: bookings.filter(b => b.status === "completed").length,
-    noShow: bookings.filter(b => b.status === "no_show").length
+    noShow: bookings.filter(b => b.status === "no_show").length,
+    revenue: bookings
+      .filter(b => b.booking_date === todayKey && b.status === "completed")
+      .reduce((a, b) => a + (b.total_price || 0), 0)
   }), [bookings, todayKey]);
 
   /* Filter + search */
@@ -350,82 +360,164 @@ function Dashboard({ onLogout, exiting }) {
           ...fadeStyle(navShown)
         }}
       >
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-5 flex items-center justify-between">
-          <div className="serif text-xl tracking-wide">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-5 flex items-center justify-between gap-4 flex-wrap">
+          <div className="serif text-xl tracking-wide shrink-0">
             <span className="text-white">Glamour</span>{" "}
             <span className="font-italic-serif" style={{ color: "var(--gold)" }}>Studio</span>
           </div>
-          <div className="hidden md:block text-white/45 text-[0.7rem] tracking-[0.32em] uppercase">Admin Dashboard</div>
+
+          <div className="hidden lg:flex items-center text-[0.65rem] tracking-[0.3em] uppercase">
+            {["BOOKINGS", "WALK-INS", "CLIENTS", "REPORTS"].map((t, i) => {
+              const active = view === t;
+              return (
+                <button
+                  key={t}
+                  data-testid={`admin-nav-${t.toLowerCase().replace(/[^a-z]/g, "")}`}
+                  onClick={() => setView(t)}
+                  className="px-3 transition-colors duration-200"
+                  style={{
+                    color: active ? "var(--gold)" : "rgba(201,168,76,0.55)",
+                    fontWeight: active ? 700 : 500,
+                    position: "relative"
+                  }}
+                >
+                  {t}
+                  <span
+                    style={{
+                      position: "absolute", left: 12, right: 12, bottom: -22,
+                      height: 2, background: "var(--gold)",
+                      transform: active ? "scaleX(1)" : "scaleX(0)",
+                      transformOrigin: "left",
+                      transition: "transform 300ms cubic-bezier(0.25,0.46,0.45,0.94)"
+                    }}
+                  />
+                </button>
+              );
+            })}
+          </div>
+
           <button
             data-testid="admin-logout"
             onClick={onLogout}
-            className="btn-outline-gold btn-sm"
+            className="btn-outline-gold btn-sm shrink-0"
           >
             <LogOut size={13} /> LOGOUT
           </button>
+
+          {/* Mobile nav row */}
+          <div className="lg:hidden basis-full flex items-center gap-1 overflow-x-auto no-scrollbar -mb-1 text-[0.62rem] tracking-[0.26em] uppercase">
+            {["BOOKINGS", "WALK-INS", "CLIENTS", "REPORTS"].map((t) => {
+              const active = view === t;
+              return (
+                <button
+                  key={t}
+                  data-testid={`admin-nav-m-${t.toLowerCase().replace(/[^a-z]/g, "")}`}
+                  onClick={() => setView(t)}
+                  className="px-3 py-2 whitespace-nowrap"
+                  style={{
+                    color: active ? "var(--gold)" : "rgba(201,168,76,0.55)",
+                    fontWeight: active ? 700 : 500,
+                    borderBottom: active ? "2px solid var(--gold)" : "2px solid transparent"
+                  }}
+                >
+                  {t}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </header>
 
       <main className="max-w-[1400px] mx-auto px-6 lg:px-10 py-10">
-        {/* Stat cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5" data-testid="admin-stats">
-          <StatCard label="Today's Bookings" value={stats.today}    delay={0}   shown={statsShown} testId="stat-today" />
-          <StatCard label="Pending"          value={stats.pending}  delay={100} shown={statsShown} testId="stat-pending" />
-          <StatCard label="Completed"        value={stats.completed} delay={200} shown={statsShown} testId="stat-completed" />
-          <StatCard label="No Shows"         value={stats.noShow}   delay={300} shown={statsShown} testId="stat-noshow" />
-        </div>
-
-        {/* Filter Tabs */}
-        <div
-          className="mt-12 flex flex-wrap gap-3"
-          style={fadeStyle(tabsShown)}
-          data-testid="admin-filter-tabs"
-        >
-          {["ALL", "TODAY", "PENDING", "COMPLETED", "NO SHOW"].map(t => {
-            const active = filter === t;
-            return (
-              <button
-                key={t}
-                data-testid={`filter-${t.replace(/ /g, "-").toLowerCase()}`}
-                onClick={() => setFilter(t)}
-                className="px-5 py-2.5 text-[0.7rem] tracking-[0.22em]"
-                style={{
-                  background: active ? "var(--gold)" : "transparent",
-                  color: active ? "#0a0a0a" : "var(--gold)",
-                  border: "1px solid var(--gold)",
-                  fontWeight: active ? 700 : 500,
-                  transition: "background 200ms cubic-bezier(0.25,0.46,0.45,0.94), color 200ms ease"
-                }}
-              >
-                {t}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Search */}
-        <div className="mt-8" style={fadeStyle(searchShown)}>
-          <SearchField value={search} onChange={setSearch} />
-        </div>
-
-        {/* Table (desktop) / Cards (mobile) */}
-        <div className="mt-8" style={fadeStyle(tableShown)}>
-          <DesktopTable key={`d-${tableKey}`} rows={filtered} onStatus={setStatus} />
-          <MobileCards key={`m-${tableKey}`} rows={filtered} onStatus={setStatus} />
-        </div>
+        {view === "BOOKINGS" && (
+          <BookingsSection
+            bookings={bookings}
+            stats={stats}
+            filter={filter} setFilter={setFilter}
+            search={search} setSearch={setSearch}
+            filtered={filtered}
+            tableKey={tableKey}
+            setStatus={setStatus}
+            statsShown={statsShown}
+            tabsShown={tabsShown}
+            searchShown={searchShown}
+            tableShown={tableShown}
+          />
+        )}
+        {view === "WALK-INS" && <WalkInsView bookings={bookings} onReload={reload} />}
+        {view === "CLIENTS"  && <ClientsView bookings={bookings} />}
+        {view === "REPORTS"  && <ReportsView bookings={bookings} />}
       </main>
     </div>
   );
 }
 
+function BookingsSection({ bookings, stats, filter, setFilter, search, setSearch, filtered, tableKey, setStatus, statsShown, tabsShown, searchShown, tableShown }) {
+  return (
+    <>
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-5" data-testid="admin-stats">
+        <StatCard label="Today's Bookings" value={stats.today}     delay={0}   shown={statsShown} testId="stat-today" />
+        <StatCard label="Pending"          value={stats.pending}   delay={100} shown={statsShown} testId="stat-pending" />
+        <StatCard label="Completed"        value={stats.completed} delay={200} shown={statsShown} testId="stat-completed" />
+        <StatCard label="No Shows"         value={stats.noShow}    delay={300} shown={statsShown} testId="stat-noshow" />
+        <StatCard label="Today's Revenue"  value={stats.revenue}   delay={400} shown={statsShown} testId="stat-revenue" prefix="₹" />
+      </div>
+
+      {/* Filter Tabs */}
+      <div
+        className="mt-12 flex flex-wrap gap-3"
+        style={fadeStyle(tabsShown)}
+        data-testid="admin-filter-tabs"
+      >
+        {["ALL", "TODAY", "PENDING", "COMPLETED", "NO SHOW"].map(t => {
+          const active = filter === t;
+          return (
+            <button
+              key={t}
+              data-testid={`filter-${t.replace(/ /g, "-").toLowerCase()}`}
+              onClick={() => setFilter(t)}
+              className="px-5 py-2.5 text-[0.7rem] tracking-[0.22em]"
+              style={{
+                background: active ? "var(--gold)" : "transparent",
+                color: active ? "#0a0a0a" : "var(--gold)",
+                border: "1px solid var(--gold)",
+                fontWeight: active ? 700 : 500,
+                transition: "background 200ms cubic-bezier(0.25,0.46,0.45,0.94), color 200ms ease"
+              }}
+            >
+              {t}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search */}
+      <div className="mt-8" style={fadeStyle(searchShown)}>
+        <SearchField value={search} onChange={setSearch} />
+      </div>
+
+      {/* Table (desktop) / Cards (mobile) */}
+      <div className="mt-8" style={fadeStyle(tableShown)}>
+        <DesktopTable key={`d-${tableKey}`} rows={filtered} onStatus={setStatus} />
+        <MobileCards key={`m-${tableKey}`} rows={filtered} onStatus={setStatus} />
+      </div>
+    </>
+  );
+}
+
 /* ---------------- Stat Card ---------------- */
-function StatCard({ label, value, delay, shown, testId }) {
+function StatCard({ label, value, delay, shown, testId, prefix = "" }) {
   const count = useCountUp(value);
   const [labelShown, setLabelShown] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setLabelShown(true), 700);
     return () => clearTimeout(t);
   }, []);
+
+  const display = prefix
+    ? `${prefix}${count.toLocaleString("en-IN")}`
+    : count;
 
   return (
     <div
@@ -447,8 +539,8 @@ function StatCard({ label, value, delay, shown, testId }) {
         e.currentTarget.style.transform = "translateY(0) scale(1)";
       }}
     >
-      <div className="serif text-5xl lg:text-6xl" style={{ color: "var(--gold)" }} data-testid={`${testId}-value`}>
-        {count}
+      <div className="serif text-4xl lg:text-5xl" style={{ color: "var(--gold)" }} data-testid={`${testId}-value`}>
+        {display}
       </div>
       <div
         className="mt-3 text-[0.7rem] tracking-[0.26em] uppercase text-white/55"
