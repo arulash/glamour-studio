@@ -5,6 +5,7 @@ import { fetchAllBookings, updateBookingStatus } from "@/lib/supabase";
 import WalkInsView from "@/components/admin/WalkInsView";
 import ClientsView from "@/components/admin/ClientsView";
 import ReportsView from "@/components/admin/ReportsView";
+import DateRangeFilter, { presetRange, inRange } from "@/components/admin/DateRangeFilter";
 
 const STAFF_USER = "staff_glamour";
 const STAFF_PASS = "glamour@123";
@@ -259,6 +260,7 @@ function Dashboard({ onLogout, exiting }) {
   const [tableKey, setTableKey] = useState(0); // bumps to re-trigger fade
   const [pageShown, setPageShown] = useState(false);
   const [view, setView] = useState("BOOKINGS");
+  const [dateRange, setDateRange] = useState(() => presetRange("today"));
   const initialMount = useRef(true);
 
   useEffect(() => {
@@ -285,28 +287,26 @@ function Dashboard({ onLogout, exiting }) {
   useEffect(() => {
     if (initialMount.current) { initialMount.current = false; return; }
     setTimeout(() => setTableKey(k => k + 1), 0);
-  }, [filter, search]);
+  }, [filter, search, dateRange]);
 
-  /* Stats */
-  const todayKey = (() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  })();
-
-  const stats = useMemo(() => ({
-    today: bookings.filter(b => b.booking_date === todayKey).length,
-    pending: bookings.filter(b => b.status === "pending").length,
-    completed: bookings.filter(b => b.status === "completed").length,
-    noShow: bookings.filter(b => b.status === "no_show").length,
-    revenue: bookings
-      .filter(b => b.booking_date === todayKey && b.status === "completed")
-      .reduce((a, b) => a + (b.total_price || 0), 0)
-  }), [bookings, todayKey]);
+  /* Stats — driven by selected date range */
+  const stats = useMemo(() => {
+    const inRangeBookings = bookings.filter(b => inRange(b.booking_date, dateRange));
+    return {
+      today: inRangeBookings.length,
+      pending: inRangeBookings.filter(b => b.status === "pending").length,
+      completed: inRangeBookings.filter(b => b.status === "completed").length,
+      noShow: inRangeBookings.filter(b => b.status === "no_show").length,
+      revenue: inRangeBookings
+        .filter(b => b.status === "completed")
+        .reduce((a, b) => a + (b.total_price || 0), 0)
+    };
+  }, [bookings, dateRange]);
 
   /* Filter + search */
   const filtered = useMemo(() => {
     let list = bookings;
-    if (filter === "TODAY")     list = list.filter(b => b.booking_date === todayKey);
+    if (filter === "TODAY")     list = list.filter(b => inRange(b.booking_date, dateRange));
     if (filter === "PENDING")   list = list.filter(b => b.status === "pending");
     if (filter === "COMPLETED") list = list.filter(b => b.status === "completed");
     if (filter === "NO SHOW")   list = list.filter(b => b.status === "no_show");
@@ -318,7 +318,7 @@ function Dashboard({ onLogout, exiting }) {
       );
     }
     return list;
-  }, [bookings, filter, search, todayKey]);
+  }, [bookings, filter, search, dateRange]);
 
   /* Optimistic status update */
   const setStatus = async (id, status) => {
@@ -442,6 +442,8 @@ function Dashboard({ onLogout, exiting }) {
             tabsShown={tabsShown}
             searchShown={searchShown}
             tableShown={tableShown}
+            dateRange={dateRange}
+            setDateRange={setDateRange}
           />
         )}
         {view === "WALK-INS" && <WalkInsView bookings={bookings} onReload={reload} />}
@@ -452,16 +454,27 @@ function Dashboard({ onLogout, exiting }) {
   );
 }
 
-function BookingsSection({ bookings, stats, filter, setFilter, search, setSearch, filtered, tableKey, setStatus, statsShown, tabsShown, searchShown, tableShown }) {
+function BookingsSection({ bookings, stats, filter, setFilter, search, setSearch, filtered, tableKey, setStatus, statsShown, tabsShown, searchShown, tableShown, dateRange, setDateRange }) {
   return (
     <>
+      {/* Date Range Filter */}
+      <div className="flex items-center justify-between gap-4 flex-wrap mb-5" style={fadeStyle(statsShown)}>
+        <div>
+          <div className="text-[0.62rem] tracking-[0.3em] text-white/45 uppercase">Showing data for</div>
+          <div className="serif text-2xl mt-1" style={{ color: "var(--gold)" }}>
+            {dateRange.label || `${dateRange.from} → ${dateRange.to}`}
+          </div>
+        </div>
+        <DateRangeFilter value={dateRange} onChange={setDateRange} testIdPrefix="bookings-date" />
+      </div>
+
       {/* Stat cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-5" data-testid="admin-stats">
-        <StatCard label="Today's Bookings" value={stats.today}     delay={0}   shown={statsShown} testId="stat-today" />
-        <StatCard label="Pending"          value={stats.pending}   delay={100} shown={statsShown} testId="stat-pending" />
-        <StatCard label="Completed"        value={stats.completed} delay={200} shown={statsShown} testId="stat-completed" />
-        <StatCard label="No Shows"         value={stats.noShow}    delay={300} shown={statsShown} testId="stat-noshow" />
-        <StatCard label="Today's Revenue"  value={stats.revenue}   delay={400} shown={statsShown} testId="stat-revenue" prefix="₹" />
+        <StatCard label="Bookings in Range" value={stats.today}     delay={0}   shown={statsShown} testId="stat-today" />
+        <StatCard label="Pending"           value={stats.pending}   delay={100} shown={statsShown} testId="stat-pending" />
+        <StatCard label="Completed"         value={stats.completed} delay={200} shown={statsShown} testId="stat-completed" />
+        <StatCard label="No Shows"          value={stats.noShow}    delay={300} shown={statsShown} testId="stat-noshow" />
+        <StatCard label="Revenue in Range"  value={stats.revenue}   delay={400} shown={statsShown} testId="stat-revenue" prefix="₹" />
       </div>
 
       {/* Filter Tabs */}
@@ -470,13 +483,15 @@ function BookingsSection({ bookings, stats, filter, setFilter, search, setSearch
         style={fadeStyle(tabsShown)}
         data-testid="admin-filter-tabs"
       >
-        {["ALL", "TODAY", "PENDING", "COMPLETED", "NO SHOW"].map(t => {
-          const active = filter === t;
+        {["ALL", "IN RANGE", "PENDING", "COMPLETED", "NO SHOW"].map(t => {
+          // map TODAY → IN RANGE for backward state compatibility
+          const stateKey = t === "IN RANGE" ? "TODAY" : t;
+          const active = filter === stateKey;
           return (
             <button
               key={t}
               data-testid={`filter-${t.replace(/ /g, "-").toLowerCase()}`}
-              onClick={() => setFilter(t)}
+              onClick={() => setFilter(stateKey)}
               className="px-5 py-2.5 text-[0.7rem] tracking-[0.22em]"
               style={{
                 background: active ? "var(--gold)" : "transparent",

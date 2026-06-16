@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import DateRangeFilter, { presetRange, inRange } from "@/components/admin/DateRangeFilter";
 
 const todayKey = () => {
   const d = new Date();
@@ -51,8 +52,8 @@ export default function ReportsView({ bookings }) {
 
 /* ============== DAILY ============== */
 function Daily({ bookings }) {
-  const today = todayKey();
-  const todays = (bookings || []).filter(b => b.booking_date === today);
+  const [range, setRange] = useState(() => presetRange("today"));
+  const todays = (bookings || []).filter(b => inRange(b.booking_date, range));
 
   const completedToday = todays.filter(b => b.status === "completed");
   const revenue = completedToday.reduce((a, b) => a + (b.total_price || 0), 0);
@@ -91,12 +92,22 @@ function Daily({ bookings }) {
 
   return (
     <div className="space-y-8">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <div className="text-[0.62rem] tracking-[0.3em] text-white/45 uppercase">Showing data for</div>
+          <div className="serif text-2xl mt-1" style={{ color: "var(--gold)" }}>
+            {range.label || `${range.from} → ${range.to}`}
+          </div>
+        </div>
+        <DateRangeFilter value={range} onChange={setRange} testIdPrefix="report-date" />
+      </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <Metric label="Today's Revenue"      value={`₹${revenue.toLocaleString("en-IN")}`} />
-        <Metric label="Total Customers Today" value={totalCustomers} />
-        <Metric label="Walk-ins Today"       value={walkIns} />
-        <Metric label="Online Bookings Today" value={online} />
-        <Metric label="No Show Rate"          value={`${noShowRate}%`} />
+        <Metric label="Revenue"             value={`₹${revenue.toLocaleString("en-IN")}`} />
+        <Metric label="Total Customers"     value={totalCustomers} />
+        <Metric label="Walk-ins"            value={walkIns} />
+        <Metric label="Online Bookings"     value={online} />
+        <Metric label="No Show Rate"        value={`${noShowRate}%`} />
       </div>
 
       <Section title="Services Breakdown" subtitle="Bookings per service · today">
