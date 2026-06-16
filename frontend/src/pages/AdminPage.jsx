@@ -458,7 +458,7 @@ function BookingsSection({ bookings, stats, filter, setFilter, search, setSearch
   return (
     <>
       {/* Date Range Filter */}
-      <div className="flex items-center justify-between gap-4 flex-wrap mb-5" style={fadeStyle(statsShown)}>
+      <div className="flex items-center justify-between gap-4 flex-wrap mb-5 relative" style={{ ...fadeStyle(statsShown), zIndex: 50 }}>
         <div>
           <div className="text-[0.62rem] tracking-[0.3em] text-white/45 uppercase">Showing data for</div>
           <div className="serif text-2xl mt-1" style={{ color: "var(--gold)" }}>
