@@ -41,7 +41,7 @@ export default function DateRangeFilter({ value, onChange, testIdPrefix = "date"
   const setCustom = (key, val) => onChange({ ...value, [key]: val, label: null });
 
   return (
-    <div ref={wrapRef} className="relative inline-block" data-testid={`${testIdPrefix}-filter`}>
+    <div ref={wrapRef} className="relative inline-block" style={{ zIndex: 9999 }} data-testid={`${testIdPrefix}-filter`}>
       <button
         data-testid={`${testIdPrefix}-trigger`}
         onClick={() => setOpen(o => !o)}
